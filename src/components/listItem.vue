@@ -1,22 +1,43 @@
 <template>
   <div>
-    <el-checkbox
-      v-model="done"
-    >
+    <template v-if="isEdit">
+      <el-input 
+        v-model="newLabel" 
+        :placeholder="task.label"
+        @keyup.enter.native="saveTask"
+        style="width: 100px;"
+      />
+      <el-button 
+        type="success" 
+        icon="el-icon-check" 
+        circle
+        @click="saveTask"
+      ></el-button>
+      <el-button 
+        type="primary" 
+        icon="el-icon-close" 
+        circle
+        @click="cancelEdit"
+      ></el-button>
+    </template>
+    <template v-else>
+      <el-checkbox
+        v-model="done"
+      />
       {{task.label}}
-    </el-checkbox>
-    <el-button 
-      type="primary" 
-      icon="el-icon-edit" 
-      circle
-      @click="openEdit"
-    ></el-button>
-    <el-button 
-      type="danger" 
-      icon="el-icon-delete" 
-      circle
-      @click="deleteTask"
-    ></el-button>
+      <el-button 
+        type="primary" 
+        icon="el-icon-edit" 
+        circle
+        @click="openEdit"
+      ></el-button>
+      <el-button 
+        type="danger" 
+        icon="el-icon-delete" 
+        circle
+        @click="deleteTask"
+      ></el-button>
+    </template>
   </div>
 </template>
 
@@ -27,7 +48,8 @@ import TASKS_DELETE from '../graphql/TasksDelete.gql'
 export default {
   data () {
     return {
-
+      isEdit: false,
+      newLabel: ''
     }
   },
   props: {
@@ -95,15 +117,34 @@ export default {
 					}
         })
         .then(data => {
-          // console.log(data)
         })
         .catch(error => {
-          console.log(error)
         })
       }
     }
   },
   methods: {
+    cancelEdit () {
+      this.isEdit = false;
+    },
+    saveTask () {
+      this.$apollo.mutate({
+        mutation: TASKS_UPDATE,
+        variables: {
+          ...this.task,
+          label: this.newLabel
+        },
+				optimisticResponse: {
+					__typename: 'Mutation',
+					updateTask: {
+						__typename: 'Task',
+						...this.task,
+						label: this.newLabel,
+					},
+				},
+			})
+			this.isEdit = false
+    },
     deleteTask () {
       this.$apollo.mutate({
         mutation: TASKS_DELETE,
@@ -135,11 +176,12 @@ export default {
         // console.log(data)
       })
       .catch(error => {
-        console.log(error)
+        // console.log(error)
       })
     },
     openEdit () {
-      
+      this.newLabel = this.task.label;
+      this.isEdit = true;
     }
   }
 }
